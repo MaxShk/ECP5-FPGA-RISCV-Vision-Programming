@@ -6,6 +6,7 @@ int main(void)
 {
     const char *port_name = "COM3";
     const int baud_rate = 115200;
+    const int messageSize = 4;
 
     struct sp_port *port = NULL;
 
@@ -39,7 +40,7 @@ int main(void)
     sp_set_flowcontrol(port, SP_FLOWCONTROL_NONE);
 
     // Message to send
-    const char *message = "PING\n";
+    const char *message = "PING";
 
     printf("TX: PING\n");
 
@@ -47,7 +48,7 @@ int main(void)
     int bytes_written = sp_blocking_write(
         port,
         message,
-        strlen(message),
+        messageSize,
         1000
     );
 
@@ -62,25 +63,37 @@ int main(void)
     }
 
     // Buffer for received data
-    char buffer[64];
+    char buffer[5];
 
     int bytes_read = sp_blocking_read(
         port,
         buffer,
-        sizeof(buffer) - 1,
+        4,
         2000
     );
 
-    if (bytes_read > 0)
+    if (bytes_read == 4)
     {
-        // Convert received bytes into a normal C string
-        buffer[bytes_read] = '\0';
+        buffer[4] = '\0';
 
-        printf("RX: %s", buffer);
+        if (strcmp(buffer, "PONG") == 0)
+        {
+            printf("RX: PONG\n");
+            printf("Communication successful.\n");
+        }
+        else
+        {
+            printf("ERROR: Invalid response: %s\n", buffer);
+        }
     }
     else if (bytes_read == 0)
     {
-        printf("Timeout: no response received.\n");
+        printf("ERROR: Timeout - no response received.\n");
+    }
+    else if (bytes_read > 0)
+    {
+        printf("ERROR: Incomplete response. Received %d of 4 bytes.\n",
+            bytes_read);
     }
     else
     {
