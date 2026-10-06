@@ -1,4 +1,6 @@
 # Vision Core
+<img width="2130" height="1356" alt="image" src="https://github.com/user-attachments/assets/d009a748-f6ff-46f8-b307-a08c38795514" />
+
 
 An open FPGA development board for building and testing real-time video pipelines: camera in, external SDRAM as a frame buffer, HDMI-compatible video out, all on one board.
 
