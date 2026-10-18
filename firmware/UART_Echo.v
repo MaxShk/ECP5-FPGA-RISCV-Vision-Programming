@@ -84,7 +84,7 @@ module UART_Echo #(
             end else if (tx_busy) begin
                 if (tx_clk_counter == 0) begin
                     tx_clk_counter <= BIT_PERIOD - 1;
-                    FTDI_RXD       <= tx_shift_reg[0];
+                    FTDI_RXD       <= tx_shift_reg[0]; 
                     tx_shift_reg   <= {1'b1, tx_shift_reg[9:1]};
                     if (tx_bit_counter == 9) begin
                         tx_busy <= 1'b0;
