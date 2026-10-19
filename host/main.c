@@ -9,6 +9,68 @@
 #define DETECTION_TIMEOUT_MS 500
 
 /*
+ * Supported host-tool targets.
+ */
+typedef enum
+{
+    TARGET_ESP32,
+    TARGET_FPGA
+} TargetType;
+
+
+/*
+ * Convert the command-line target argument into a TargetType.
+ *
+ * Expected use:
+ *   main.exe --target esp32
+ *   main.exe --target fpga
+ *
+ * Returns 1 if the target is valid.
+ * Returns 0 if the command-line arguments are invalid.
+ */
+int parse_target(int argc, char *argv[], TargetType *target)
+{
+    if (argc != 3)
+    {
+        return 0;
+    }
+
+    if (strcmp(argv[1], "--target") != 0)
+    {
+        return 0;
+    }
+
+    if (strcmp(argv[2], "esp32") == 0)
+    {
+        *target = TARGET_ESP32;
+        return 1;
+    }
+
+    if (strcmp(argv[2], "fpga") == 0)
+    {
+        *target = TARGET_FPGA;
+        return 1;
+    }
+
+    return 0;
+}
+
+
+/*
+ * Return a readable target name for terminal output.
+ */
+const char *target_name(TargetType target)
+{
+    if (target == TARGET_ESP32)
+    {
+        return "ESP32-S3";
+    }
+
+    return "VisionCore FPGA";
+}
+
+
+/*
  * Configure a serial port for:
  * 115200 baud, 8 data bits, no parity,
  * 1 stop bit, and no flow control.
@@ -139,14 +201,19 @@ int find_board_port(char *detected_port, int size)
 
         printf("Checking %s... ", port_name);
 
-        /* Try to open the port. */
+        /*
+         * Try to open the port.
+         * If another program is using it, skip it.
+         */
         if (sp_open(test_port, SP_MODE_READ_WRITE) != SP_OK)
         {
             printf("BUSY or could not open. Skipped.\n");
             continue;
         }
 
-        /* Configure the port for 115200 8N1. */
+        /*
+         * Configure the port for 115200 8N1.
+         */
         if (!configure_port(test_port))
         {
             printf("CONFIGURATION ERROR. Skipped.\n");
@@ -154,12 +221,16 @@ int find_board_port(char *detected_port, int size)
             continue;
         }
 
-        /* Remove old data before testing the port. */
+        /*
+         * Remove old data before testing the port.
+         */
         sp_flush(test_port, SP_BUF_BOTH);
 
         const char *message = "PING";
 
-        /* Send PING with the shorter detection timeout. */
+        /*
+         * Send PING with the shorter detection timeout.
+         */
         int bytes_written = sp_blocking_write(
             test_port,
             message,
@@ -186,7 +257,9 @@ int find_board_port(char *detected_port, int size)
 
         char response[5];
 
-        /* Wait up to 500 ms for PONG. */
+        /*
+         * Wait up to 500 ms for PONG.
+         */
         int bytes_read = sp_blocking_read(
             test_port,
             response,
@@ -261,6 +334,8 @@ int find_board_port(char *detected_port, int size)
  * AA:BB:CC:DD:EE:FF
  *
  * The response is 17 characters.
+ *
+ * This command is ESP32-only.
  */
 void grab_mac_address(struct sp_port *port)
 {
@@ -311,13 +386,14 @@ void grab_mac_address(struct sp_port *port)
  * Show information that the host can see
  * about the connected serial device.
  */
-void show_device_information(struct sp_port *port)
+void show_device_information(struct sp_port *port, TargetType target)
 {
     const char *name = sp_get_port_name(port);
     const char *description = sp_get_port_description(port);
 
     printf("\nDevice Information\n");
     printf("------------------\n");
+    printf("Target: %s\n", target_name(target));
     printf("Port: %s\n", name);
 
     if (description != NULL)
@@ -371,10 +447,11 @@ void send_custom_command(struct sp_port *port)
 /*
  * Display the current UART settings.
  */
-void show_connection_settings(const char *port_name)
+void show_connection_settings(const char *port_name, TargetType target)
 {
     printf("\nConnection Settings\n");
     printf("-------------------\n");
+    printf("Target: %s\n", target_name(target));
     printf("Port: %s\n", port_name);
     printf("Baud Rate: %d\n", BAUD_RATE);
     printf("Data Bits: 8\n");
@@ -387,11 +464,21 @@ void show_connection_settings(const char *port_name)
 /*
  * Display the Version 1 host-tool menu.
  */
-void show_menu(void)
+void show_menu(TargetType target)
 {
     printf("\nVisionCore Host Tool\n");
     printf("--------------------\n");
-    printf("1) Grab MAC Address\n");
+    printf("Target: %s\n\n", target_name(target));
+
+    printf("1) Grab MAC Address");
+
+    if (target == TARGET_FPGA)
+    {
+        printf(" (ESP32 only)");
+    }
+
+    printf("\n");
+
     printf("2) Check Connection\n");
     printf("3) Get Device Information\n");
     printf("4) Send Custom Command\n");
@@ -401,11 +488,31 @@ void show_menu(void)
 }
 
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    TargetType target;
+
+    /*
+     * Parse the required target flag.
+     */
+    if (!parse_target(argc, argv, &target))
+    {
+        printf("Usage:\n");
+        printf("  %s --target esp32\n", argv[0]);
+        printf("  %s --target fpga\n", argv[0]);
+        return 1;
+    }
+
+    printf("Selected target: %s\n\n", target_name(target));
+
     char detected_port[64];
 
-    /* Automatically find a compatible device. */
+    /*
+     * Automatically find a compatible device.
+     *
+     * Both the ESP32 test firmware and FPGA UART responder
+     * use PING/PONG for the basic connection test.
+     */
     if (!find_board_port(detected_port, sizeof(detected_port)))
     {
         printf("ERROR: Compatible device could not be found.\n");
@@ -415,14 +522,18 @@ int main(void)
     const char *port_name = detected_port;
     struct sp_port *port = NULL;
 
-    /* Get the detected serial port. */
+    /*
+     * Get the detected serial port.
+     */
     if (sp_get_port_by_name(port_name, &port) != SP_OK)
     {
         printf("ERROR: Could not find %s\n", port_name);
         return 1;
     }
 
-    /* Open the port for sending and receiving. */
+    /*
+     * Open the port for sending and receiving.
+     */
     if (sp_open(port, SP_MODE_READ_WRITE) != SP_OK)
     {
         printf("ERROR: Could not open %s\n", port_name);
@@ -430,7 +541,9 @@ int main(void)
         return 1;
     }
 
-    /* Configure UART. */
+    /*
+     * Configure UART.
+     */
     if (!configure_port(port))
     {
         printf("ERROR: Could not configure %s\n", port_name);
@@ -444,14 +557,17 @@ int main(void)
     sp_flush(port, SP_BUF_BOTH);
 
     printf("Connected to %s at %d baud.\n", port_name, BAUD_RATE);
+    printf("Target: %s\n", target_name(target));
 
-    /* Main host-tool menu loop. */
+    /*
+     * Main host-tool menu loop.
+     */
     while (1)
     {
         char input[32];
         int choice;
 
-        show_menu();
+        show_menu(target);
 
         if (fgets(input, sizeof(input), stdin) == NULL)
         {
@@ -464,7 +580,19 @@ int main(void)
         switch (choice)
         {
             case 1:
-                grab_mac_address(port);
+                /*
+                 * MAC? is supported by the ESP32 test target only.
+                 */
+                if (target == TARGET_ESP32)
+                {
+                    grab_mac_address(port);
+                }
+                else
+                {
+                    printf(
+                        "\nMAC address is only supported by the ESP32 target.\n"
+                    );
+                }
                 break;
 
             case 2:
@@ -473,7 +601,7 @@ int main(void)
                 break;
 
             case 3:
-                show_device_information(port);
+                show_device_information(port, target);
                 break;
 
             case 4:
@@ -481,7 +609,7 @@ int main(void)
                 break;
 
             case 5:
-                show_connection_settings(port_name);
+                show_connection_settings(port_name, target);
                 break;
 
             case 6:
