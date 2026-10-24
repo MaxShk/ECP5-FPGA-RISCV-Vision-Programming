@@ -186,6 +186,16 @@ int find_board_port(char *detected_port, int size)
 {
     struct sp_port **port_list;
 
+    /*
+     * Keep track of the scan results so a final summary can be shown.
+     */
+    int ports_checked = 0;
+    int busy_ports = 0;
+    int silent_ports = 0;
+    int partial_reply_ports = 0;
+    int wrong_reply_ports = 0;
+    int other_errors = 0;
+
     printf("Searching for compatible serial device...\n\n");
 
     if (sp_list_ports(&port_list) != SP_OK)
@@ -199,6 +209,7 @@ int find_board_port(char *detected_port, int size)
         struct sp_port *test_port = port_list[i];
         const char *port_name = sp_get_port_name(test_port);
 
+        ports_checked++;
         printf("Checking %s... ", port_name);
 
         /*
@@ -208,6 +219,7 @@ int find_board_port(char *detected_port, int size)
         if (sp_open(test_port, SP_MODE_READ_WRITE) != SP_OK)
         {
             printf("BUSY or could not open. Skipped.\n");
+            busy_ports++;
             continue;
         }
 
@@ -217,6 +229,7 @@ int find_board_port(char *detected_port, int size)
         if (!configure_port(test_port))
         {
             printf("CONFIGURATION ERROR. Skipped.\n");
+            other_errors++;
             sp_close(test_port);
             continue;
         }
@@ -241,6 +254,7 @@ int find_board_port(char *detected_port, int size)
         if (bytes_written < 0)
         {
             printf("WRITE ERROR. Skipped.\n");
+            other_errors++;
             sp_close(test_port);
             continue;
         }
@@ -251,6 +265,7 @@ int find_board_port(char *detected_port, int size)
                 "INCOMPLETE WRITE (%d of 4 bytes). Skipped.\n",
                 bytes_written
             );
+            other_errors++;
             sp_close(test_port);
             continue;
         }
@@ -270,6 +285,7 @@ int find_board_port(char *detected_port, int size)
         if (bytes_read == 0)
         {
             printf("SILENT - no response. Skipped.\n");
+            silent_ports++;
             sp_close(test_port);
             continue;
         }
@@ -277,6 +293,7 @@ int find_board_port(char *detected_port, int size)
         if (bytes_read < 0)
         {
             printf("READ ERROR. Skipped.\n");
+            other_errors++;
             sp_close(test_port);
             continue;
         }
@@ -287,6 +304,7 @@ int find_board_port(char *detected_port, int size)
                 "INCOMPLETE RESPONSE (%d of 4 bytes). Skipped.\n",
                 bytes_read
             );
+            partial_reply_ports++;
             sp_close(test_port);
             continue;
         }
@@ -295,7 +313,7 @@ int find_board_port(char *detected_port, int size)
 
         if (strcmp(response, "PONG") == 0)
         {
-            printf("FOUND - received PONG.\n\n");
+            printf("FOUND - received PONG.\n");
 
             snprintf(
                 detected_port,
@@ -303,6 +321,16 @@ int find_board_port(char *detected_port, int size)
                 "%s",
                 port_name
             );
+
+            printf("\nPort Scan Summary\n");
+            printf("-----------------\n");
+            printf("Ports checked:       %d\n", ports_checked);
+            printf("Busy/unavailable:    %d\n", busy_ports);
+            printf("Silent/no reply:     %d\n", silent_ports);
+            printf("Partial replies:     %d\n", partial_reply_ports);
+            printf("Wrong replies:       %d\n", wrong_reply_ports);
+            printf("Other errors:        %d\n", other_errors);
+            printf("Compatible device:   %s\n\n", detected_port);
 
             sp_close(test_port);
             sp_free_port_list(port_list);
@@ -314,6 +342,7 @@ int find_board_port(char *detected_port, int size)
             "INVALID RESPONSE \"%s\". Skipped.\n",
             response
         );
+        wrong_reply_ports++;
 
         sp_close(test_port);
     }
@@ -321,6 +350,15 @@ int find_board_port(char *detected_port, int size)
     sp_free_port_list(port_list);
 
     printf("\nNo compatible device found.\n");
+    printf("\nPort Scan Summary\n");
+    printf("-----------------\n");
+    printf("Ports checked:       %d\n", ports_checked);
+    printf("Busy/unavailable:    %d\n", busy_ports);
+    printf("Silent/no reply:     %d\n", silent_ports);
+    printf("Partial replies:     %d\n", partial_reply_ports);
+    printf("Wrong replies:       %d\n", wrong_reply_ports);
+    printf("Other errors:        %d\n", other_errors);
+    printf("Compatible device:   None\n\n");
 
     return 0;
 }
