@@ -1,7 +1,5 @@
 # Vision Core
-<img width="1046" height="689" alt="3d_render_top-10-16-26" src="https://github.com/user-attachments/assets/ff5a3db6-f7b7-46ee-8cd3-813ffe0c78d0" />
-
-
+<img width="977" height="666" alt="Screenshot 2026-10-28 at 12 53 32 PM" src="https://github.com/user-attachments/assets/cb1849c4-1786-4f8d-a8e2-3ed31703a726" />
 
 An open FPGA development board for building and testing real-time video pipelines: camera in, external SDRAM as a frame buffer, HDMI-compatible video out, all on one board.
 
@@ -9,7 +7,7 @@ Status: hardware in design (schematic done, PCB layout in progress). Items marke
 
 ## The problem
 
-Prototyping a real-time vision pipeline on an FPGA needs three things working together: a camera input, a frame buffer in external memory, and a video output. A student or researcher who wants to try an idea (a filter, an edge detector, a custom scaler) usually has to assemble these from separate parts: a dev board, a camera adapter, an HDMI breakout and a memory board. Each combination brings its own pin mapping, voltage-level and signal-integrity problems, and the project stalls on wiring before any vision work starts.
+Prototyping a real-time vision pipeline on an FPGA needs three things working together: a camera, a frame buffer in external memory, and a video output. A student or researcher who wants to try an idea (a filter, an edge detector, a custom scaler) usually has to assemble these from separate parts: a dev board, a camera adapter, an HDMI breakout and a memory board. Each combination brings its own pin mapping, voltage-level and signal-integrity problems, and the project stalls on wiring before any vision work starts.
 
 Boards that integrate all of this are often closed, expensive, or tied to a vendor toolchain, which makes them hard to modify, teach with or reproduce.
 
