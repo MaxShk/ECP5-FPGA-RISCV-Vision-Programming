@@ -1,5 +1,5 @@
 # Vision Core
-<img width="1234" height="767" alt="Screenshot 2026-11-15 at 10 50 06 PM" src="https://github.com/user-attachments/assets/4d9fd4e0-77ad-4551-bb91-0d02cc0175d1" />
+<img width="983" height="665" alt="Screenshot 2026-11-16 at 1 49 44 PM" src="https://github.com/user-attachments/assets/bc749199-9f50-4328-9377-823ae185d03a" />
 
 
 An open FPGA development board for building and testing real-time video pipelines: camera in, external SDRAM as a frame buffer, HDMI-compatible video out, all on one board.
@@ -68,7 +68,8 @@ Each goal is a test someone else can run. A goal is done only when the test pass
 - Designed in KiCad. The PCB is 4 layers, with the stackup under design review.
 
 ## Hardware overview
-<img width="972" height="698" alt="3d_render_bottom-10-16-26" src="https://github.com/user-attachments/assets/0164b38e-1283-40f6-ab8c-0d4c50e27433" />
+<img width="903" height="633" alt="Screenshot 2026-11-16 at 1 49 59 PM" src="https://github.com/user-attachments/assets/8bf5b9f4-ac95-423f-a253-69a6e25352c3" />
+
 
 
 | Block | Details |
